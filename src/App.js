@@ -1,91 +1,103 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { supabase } from './supabaseClient'; // Importamos el cliente de Supabase
+import "./App.css";
 
-// Función para obtener el nombre del día de la semana
 const getDayOfWeek = (day, month, year) => {
-    const date = new Date(year, month - 1, day); // mes - 1 porque los meses en Date comienzan en 0
+    const date = new Date(year, month - 1, day);
     const options = { weekday: 'long' };
     return new Intl.DateTimeFormat('es-ES', options).format(date);
 };
 
-// Función para obtener el nombre del mes
 const getMonthName = (month) => {
-    const date = new Date(0, month - 1); // mes - 1 porque Date empieza desde 0
+    const date = new Date(0, month - 1);
     const options = { month: 'long' };
     return new Intl.DateTimeFormat('es-ES', options).format(date);
 };
 
-// Función para obtener el número de días en un mes
 const getDaysInMonth = (month, year) => {
-    return new Date(year, month, 0).getDate(); // Día 0 es el último día del mes anterior
+    return new Date(year, month, 0).getDate();
 };
 
 function App() {
     const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1; // Obtener el mes actual
-
-    // Estado para el índice actual del carrusel y el mes visualizado
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [viewedMonthIndex, setViewedMonthIndex] = useState(0); // Índice para ver qué mes se está visualizando
-
-    // Estado para almacenar los servicios por día
+    const [viewedMonthIndex, setViewedMonthIndex] = useState(new Date().getMonth());
     const [services, setServices] = useState({});
+    const [showForm, setShowForm] = useState(null);
+    const [expandedService, setExpandedService] = useState(null);
+    const [formData, setFormData] = useState({
+        cliente: '',
+        servicio: '',
+        moviles: [{ movil: '' }],
+        choferes: [{ chofer: '' }],
+        origen: '',
+        destino: '',
+        horario: '',
+        observaciones: ''
+    });
 
-    // Crear una referencia para el carrusel
     const sliderRef = useRef(null);
+    const daysInYear = generateDaysForYear(currentYear);
 
-    // Generar los días con sus nombres correspondientes a partir del mes actual
-    const generateDays = (startingMonth, startingYear, numberOfDays) => {
-        let days = [];
-        let month = startingMonth;
-        let year = startingYear;
-        let dayCount = 0;
-
-        while (dayCount < numberOfDays) {
-            const daysInMonth = getDaysInMonth(month, year);
-            for (let day = 1; day <= daysInMonth; day++) {
-                days.push({ day, dayOfWeek: getDayOfWeek(day, month, year), month, year });
-                dayCount++;
-                if (dayCount >= numberOfDays) break;
-            }
-            month = (month % 12) + 1;
-            if (month === 1) year++; // Avanzar al próximo año si llegamos a enero
-        }
-
-        return days;
-    };
-
-    // Generamos 120 días, 60 días actuales + los 60 días del siguiente mes.
-    const daysInMonth = generateDays(currentMonth, currentYear, 120);
-
-    // Definir el estilo del botón
-    const buttonStyle = {
-        backgroundColor: "#007bff",
-        color: "white",
-        border: "none",
-        padding: "10px",
-        cursor: "pointer",
-        borderRadius: "5px",
-        margin: "0 5px",
-    };
-
-    // Configuración del carrusel
+    // Configuración del slider
     const settings = {
-        dots: false, // Desactivar los puntos
+        dots: false,
         infinite: false,
         speed: 500,
-        slidesToShow: 7, // Mostrar 7 días por pantalla
+        slidesToShow: 6,
         slidesToScroll: 1,
         afterChange: (current) => {
             setCurrentIndex(current);
-            const viewedMonth = daysInMonth[current].month;
-            setViewedMonthIndex(viewedMonth - currentMonth); // Calcular la diferencia de mes
+            const viewedMonth = daysInYear[current].month;
+            setViewedMonthIndex(viewedMonth - 1);
         },
     };
 
-    // Funciones para avanzar y retroceder libremente
+    // Obtener los servicios de Supabase al cargar la app
+    useEffect(() => {
+        const fetchServices = async () => {
+            const { data: services, error } = await supabase
+                .from('services')
+                .select('*');
+            if (error) {
+                console.error('Error al obtener los servicios:', error);
+            } else {
+                const formattedServices = services.reduce((acc, service) => {
+                    const dateKey = `${service.year}-${service.month}-${service.day}`;
+                    if (!acc[dateKey]) {
+                        acc[dateKey] = [];
+                    }
+                    acc[dateKey].push(service);
+                    return acc;
+                }, {});
+                setServices(formattedServices);
+            }
+        };
+        fetchServices();
+    }, []);
+
+    // Guardar un servicio en Supabase
+    const saveServiceToDatabase = async (serviceData) => {
+        const { data, error } = await supabase
+            .from('services')
+            .insert([serviceData]);
+
+        if (error) {
+            console.error('Error al guardar el servicio:', error);
+        } else {
+            console.log('Servicio guardado:', data);
+            // Actualizar el estado con el nuevo servicio
+            const dateKey = `${serviceData.year}-${serviceData.month}-${serviceData.day}`;
+            setServices((prevServices) => ({
+                ...prevServices,
+                [dateKey]: [...(prevServices[dateKey] || []), serviceData]
+            }));
+        }
+    };
+
     const next = () => {
         if (sliderRef.current) {
             sliderRef.current.slickNext();
@@ -98,119 +110,297 @@ function App() {
         }
     };
 
-    // Función para saltar rápidamente a un mes
     const jumpToMonth = (event) => {
         const selectedMonth = parseInt(event.target.value, 10);
-        const firstDayOfMonth = daysInMonth.findIndex((day) => day.month === selectedMonth);
+        const firstDayOfMonth = daysInYear.findIndex((day) => day.month === selectedMonth + 1);
         if (sliderRef.current && firstDayOfMonth !== -1) {
             sliderRef.current.slickGoTo(firstDayOfMonth);
         }
     };
 
-    // Obtener el mes visualizado actualmente
-    const viewedMonth = currentMonth + viewedMonthIndex;
-    const displayedMonthName = getMonthName(viewedMonth);
+    const displayedMonthName = getMonthName(viewedMonthIndex + 1);
 
-    // Función para agregar un servicio a un día específico
     const addService = (dateKey) => {
-        const service = prompt("Ingresa el nombre del servicio:");
-        if (service) {
-            setServices((prevServices) => {
-                const updatedServices = { ...prevServices };
-                if (updatedServices[dateKey]) {
-                    updatedServices[dateKey].push(service);
-                } else {
-                    updatedServices[dateKey] = [service];
-                }
-                return updatedServices;
-            });
+        setShowForm(dateKey);
+    };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData((prevData) => ({
+            ...prevData,
+            [name]: value,
+        }));
+    };
+
+    const handleArrayInputChange = (e, index, field, type) => {
+        if (!formData[type]) return;
+
+        const updatedData = formData[type].map((item, i) =>
+            i === index ? { ...item, [field]: e.target.value } : item
+        );
+        setFormData((prevData) => ({
+            ...prevData,
+            [type]: updatedData,
+        }));
+    };
+
+    const addMovil = () => {
+        setFormData((prevData) => ({
+            ...prevData,
+            moviles: [...(prevData.moviles || []), { movil: '' }]
+        }));
+    };
+
+    const addChofer = () => {
+        setFormData((prevData) => ({
+            ...prevData,
+            choferes: [...(prevData.choferes || []), { chofer: '' }]
+        }));
+    };
+
+    const saveService = (dateKey) => {
+        const [year, month, day] = dateKey.split('-');
+        const serviceData = {
+            ...formData,
+            year: parseInt(year),
+            month: parseInt(month),
+            day: parseInt(day),
+            completed: false
+        };
+        saveServiceToDatabase(serviceData);
+        setShowForm(null);
+        setFormData({
+            cliente: '',
+            servicio: '',
+            moviles: [{ movil: '' }],
+            choferes: [{ chofer: '' }],
+            origen: '',
+            destino: '',
+            horario: '',
+            observaciones: ''
+        });
+    };
+
+    const markAsCompleted = async (dateKey, index) => {
+        const service = services[dateKey][index];
+        const { data, error } = await supabase
+            .from('services')
+            .update({ completed: true })
+            .eq('id', service.id);
+
+        if (error) {
+            console.error('Error al marcar como completado:', error);
+        } else {
+            const updatedServices = { ...services };
+            updatedServices[dateKey][index].completed = true;
+            setServices(updatedServices);
         }
     };
 
     return (
-        <div style={{ padding: "20px" }}>
-            <header>
+        <div className="app-container">
+            <header className="header">
                 <h1>Planificación de Servicios</h1>
             </header>
 
-            {/* Mostrar el mes actual visualizado */}
-            <h2 style={{ textAlign: "center" }}>Visualizando: {displayedMonthName}</h2>
+            {!showForm && (
+                <>
+                    <h2 className="month-viewing">Visualizando: {displayedMonthName}</h2>
 
-            {/* Selector para saltar rápidamente a un mes */}
-            <div style={{ marginBottom: "20px", textAlign: "center" }}>
-                <label htmlFor="monthSelector">Ir al mes: </label>
-                <select id="monthSelector" onChange={jumpToMonth}>
-                    {[...Array(12)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                            {getMonthName(i + 1)}
-                        </option>
-                    ))}
-                </select>
-            </div>
+                    <div className="month-selector">
+                        <label htmlFor="monthSelector">Ir al mes: </label>
+                        <select id="monthSelector" onChange={jumpToMonth}>
+                            {[...Array(12)].map((_, i) => (
+                                <option key={i + 1} value={i}>
+                                    {getMonthName(i + 1)}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-            {/* Botones para avanzar y retroceder libremente */}
-            <div style={{ textAlign: "center", marginBottom: "10px" }}>
-                <button style={buttonStyle} onClick={previous} disabled={currentIndex === 0}>
-                    Anterior
-                </button>
-                <button
-                    style={buttonStyle}
-                    onClick={next}
-                    disabled={currentIndex >= daysInMonth.length - 7}
-                >
-                    Siguiente
-                </button>
-            </div>
+                    <div className="slider-controls">
+                        <button className="button" onClick={previous} disabled={currentIndex === 0}>
+                            Anterior
+                        </button>
+                        <button
+                            className="button"
+                            onClick={next}
+                            disabled={currentIndex >= daysInYear.length - 7}
+                        >
+                            Siguiente
+                        </button>
+                    </div>
+                </>
+            )}
 
-            <div style={{ marginTop: "10px" }}>
-                {/* Carrusel */}
-                <Slider ref={sliderRef} {...settings}>
-                    {daysInMonth.map(({ day, dayOfWeek, month, year }) => {
-                        const dateKey = `${year}-${month}-${day}`; // Clave única para cada día
-                        return (
-                            <div key={dateKey} style={{ padding: "10px", textAlign: "center" }}>
-                                <div
-                                    style={{
-                                        padding: "20px",
-                                        backgroundColor: "#f5f5f5",
-                                        borderRadius: "8px",
-                                        position: "relative",
-                                        minHeight: "150px",
-                                    }}
-                                >
-                                    <h3>{`${dayOfWeek} ${day}`}</h3>
-                                    {/* Botón para agregar servicio */}
-                                    <button
-                                        style={{
-                                            ...buttonStyle,
-                                            position: "absolute",
-                                            top: "10px",
-                                            right: "10px",
-                                            padding: "5px 10px",
-                                            fontSize: "12px",
-                                        }}
-                                        onClick={() => addService(dateKey)}
-                                    >
-                                        + Servicio
-                                    </button>
-                                    {/* Mostrar los servicios añadidos */}
-                                    <div style={{ marginTop: "10px", textAlign: "left" }}>
-                                        {services[dateKey] && services[dateKey].length > 0 && (
-                                            <ul style={{ paddingLeft: "20px", textAlign: "left" }}>
-                                                {services[dateKey].map((service, index) => (
-                                                    <li key={index}>{service}</li>
-                                                ))}
-                                            </ul>
-                                        )}
+            <div className="slider-container">
+                {!showForm && (
+                    <Slider ref={sliderRef} {...settings}>
+                        {daysInYear.map(({ day, dayOfWeek, month, year }) => {
+                            const dateKey = `${year}-${month}-${day}`;
+                            return (
+                                <div key={dateKey} className="day-card">
+                                    <div className="day-card-content">
+                                        <h3>{`${dayOfWeek} ${day}`}</h3>
+
+                                        <button className="add-service-btn" onClick={() => addService(dateKey)}>
+                                            + Servicio
+                                        </button>
+
+                                        <div className="service-list">
+                                            {services[dateKey] && services[dateKey].length > 0 && (
+                                                <div className="service-list-items">
+                                                    {services[dateKey].map((service, index) => (
+                                                        <div key={index} className="service-card">
+                                                            <p><strong>Cliente:</strong> {service.cliente}</p>
+                                                            <p><strong>Servicio:</strong> {service.servicio}</p>
+                                                            {service.moviles?.map((movil, idx) => (
+                                                                <p key={idx}><strong>Móvil:</strong> {movil.movil}</p>
+                                                            ))}
+                                                            {service.choferes?.map((chofer, idx) => (
+                                                                <p key={idx}><strong>Chofer:</strong> {chofer.chofer}</p>
+                                                            ))}
+
+                                                            <button
+                                                                className="button"
+                                                                onClick={() => setExpandedService(service)}
+                                                            >
+                                                                Ver detalles
+                                                            </button>
+
+                                                            <button
+                                                                className="button completed-btn"
+                                                                onClick={() => markAsCompleted(dateKey, index)}
+                                                            >
+                                                                {service.completed ? "Finalizado" : "Marcar como Finalizado"}
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
+                            );
+                        })}
+                    </Slider>
+                )}
+
+                {showForm && (
+                    <div className="form-container">
+                        <h4>Añadir servicio</h4>
+                        <label>Cliente:</label>
+                        <input
+                            type="text"
+                            name="cliente"
+                            value={formData.cliente}
+                            onChange={handleInputChange}
+                        />
+                        <label>Servicio:</label>
+                        <input
+                            type="text"
+                            name="servicio"
+                            value={formData.servicio}
+                            onChange={handleInputChange}
+                        />
+                        {formData.moviles?.map((movil, index) => (
+                            <div key={index}>
+                                <label>Móvil:</label>
+                                <input
+                                    type="text"
+                                    value={movil.movil}
+                                    onChange={(e) => handleArrayInputChange(e, index, 'movil', 'moviles')}
+                                />
                             </div>
-                        );
-                    })}
-                </Slider>
+                        ))}
+                        {formData.choferes?.map((chofer, index) => (
+                            <div key={index}>
+                                <label>Chofer:</label>
+                                <input
+                                    type="text"
+                                    value={chofer.chofer}
+                                    onChange={(e) => handleArrayInputChange(e, index, 'chofer', 'choferes')}
+                                />
+                            </div>
+                        ))}
+                        <div className="add-more-buttons">
+                            <button onClick={addMovil} className="button add-more-btn">
+                                + Añadir otro Móvil
+                            </button>
+                            <button onClick={addChofer} className="button add-more-btn">
+                                + Añadir otro Chofer
+                            </button>
+                        </div>
+                        <label>Origen:</label>
+                        <input
+                            type="text"
+                            name="origen"
+                            value={formData.origen}
+                            onChange={handleInputChange}
+                        />
+                        <label>Destino:</label>
+                        <input
+                            type="text"
+                            name="destino"
+                            value={formData.destino}
+                            onChange={handleInputChange}
+                        />
+                        <label>Horario:</label>
+                        <input
+                            type="text"
+                            name="horario"
+                            value={formData.horario}
+                            onChange={handleInputChange}
+                        />
+                        <label>Observaciones:</label>
+                        <input
+                            type="text"
+                            name="observaciones"
+                            value={formData.observaciones}
+                            onChange={handleInputChange}
+                        />
+                        <button onClick={() => saveService(showForm)} className="button save-btn">
+                            Guardar Servicio
+                        </button>
+                    </div>
+                )}
+
+                {expandedService && (
+                    <div className="modal" onClick={() => setExpandedService(null)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <h2>Detalles del Servicio</h2>
+                            <p><strong>Cliente:</strong> {expandedService.cliente}</p>
+                            <p><strong>Servicio:</strong> {expandedService.servicio}</p>
+                            {expandedService.moviles?.map((movil, index) => (
+                                <p key={index}><strong>Móvil:</strong> {movil.movil}</p>
+                            ))}
+                            {expandedService.choferes?.map((chofer, index) => (
+                                <p key={index}><strong>Chofer:</strong> {chofer.chofer}</p>
+                            ))}
+                            <p><strong>Origen:</strong> {expandedService.origen}</p>
+                            <p><strong>Destino:</strong> {expandedService.destino}</p>
+                            <p><strong>Horario:</strong> {expandedService.horario}</p>
+                            <p><strong>Observaciones:</strong> {expandedService.observaciones}</p>
+                            <button className="button close-btn" onClick={() => setExpandedService(null)}>
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
+}
+
+function generateDaysForYear(year) {
+    let days = [];
+    for (let month = 1; month <= 12; month++) {
+        const daysInMonth = getDaysInMonth(month, year);
+        for (let day = 1; day <= daysInMonth; day++) {
+            days.push({ day, dayOfWeek: getDayOfWeek(day, month, year), month, year });
+        }
+    }
+    return days;
 }
 
 export default App;

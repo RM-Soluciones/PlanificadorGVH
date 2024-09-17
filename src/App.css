@@ -1,38 +1,229 @@
-.App {
+/* General */
+.app-container {
+  padding: 20px;
+  max-width: 95%; /* Ahora ocupa el 95% del ancho de la pantalla */
+  margin: 0 auto; /* Centrar la app */
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.month-viewing {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 1.2rem;
+}
+
+/* Botones */
+.button {
+  background-color: #0056b3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 0 5px;
+  font-size: 15px;
+}
+
+.button:hover {
+  background-color: #004099;
+}
+
+.completed-btn {
+  background-color: #28a745;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.completed-btn:hover {
+  background-color: #218838;
+}
+
+/* Carrusel */
+.slider-container {
+  margin-top: 20px;
+}
+
+.slider-controls {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.day-card {
+  padding: 10px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.day-card-content {
+  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  position: relative;
+  min-height: 150px;
+  transition: background-color 0.3s ease;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.day-card-content:hover {
+  background-color: #f1f1f1;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Botón agregar servicio */
+.add-service-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+/* Servicio */
+.service-list-items {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+}
+
+.service-card {
+  border: 1px solid #ddd;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 5px;
+  background-color: #fff;
+}
+
+.service-card.completed {
+  background-color: #eaffea;
+}
+
+/* Formulario */
+.form-container {
+  padding: 20px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-top: 20px;
+  width: 100%; /* Ajuste para que ocupe todo el ancho disponible */
+}
+
+.form-container label {
+  display: block;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.form-container input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+.form-container button {
+  padding: 12px;
+  background-color: #0056b3;
   color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
 }
 
-.App-link {
-  color: #61dafb;
+.form-container button:hover {
+  background-color: #004099;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.add-more-buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+.add-more-btn {
+  background-color: #28a745;
+  width: 48%;
+  padding: 8px;
+}
+
+.save-btn {
+  width: 100%;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 6px;
+  width: 90%;
+  max-width: 600px;
+}
+
+/* Media Queries */
+@media (max-width: 1024px) {
+  /* Ampliar las tarjetas en pantallas medianas */
+  .day-card-content {
+    padding: 20px;
+    font-size: 16px;
   }
-  to {
-    transform: rotate(360deg);
+}
+
+@media (max-width: 768px) {
+  .day-card-content {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .add-service-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .form-container input {
+    padding: 8px;
+  }
+
+  .button {
+    font-size: 14px;
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .day-card-content {
+    padding: 10px;
+  }
+
+  .add-service-btn {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  .form-container input {
+    padding: 6px;
+  }
+
+  .button {
+    font-size: 12px;
+    padding: 8px;
+  }
+
+  .add-more-buttons {
+    flex-direction: column;
+    gap: 10px;
   }
 }
