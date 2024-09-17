@@ -81,14 +81,14 @@ function App() {
 
     // Guardar un servicio en Supabase
     const saveServiceToDatabase = async (serviceData) => {
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('services')
-            .insert([serviceData]);
+            .insert([serviceData]); // Eliminar variable 'data' no usada
 
         if (error) {
             console.error('Error al guardar el servicio:', error);
         } else {
-            console.log('Servicio guardado:', data);
+            console.log('Servicio guardado');
             // Actualizar el estado con el nuevo servicio
             const dateKey = `${serviceData.year}-${serviceData.month}-${serviceData.day}`;
             setServices((prevServices) => ({
@@ -183,7 +183,7 @@ function App() {
 
     const markAsCompleted = async (dateKey, index) => {
         const service = services[dateKey][index];
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('services')
             .update({ completed: true })
             .eq('id', service.id);
