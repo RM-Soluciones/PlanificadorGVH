@@ -1,22 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { supabase } from './supabaseClient'; // Importamos el cliente de Supabase
+import { supabase } from './supabaseClient';
 import "./App.css";
 
-const getDayOfWeek = (day, month, year) => {
-    const date = new Date(year, month - 1, day);
-    const options = { weekday: 'long' };
-    return new Intl.DateTimeFormat('es-ES', options).format(date);
-};
-
-const getMonthName = (month) => {
-    const date = new Date(0, month - 1);
-    const options = { month: 'long' };
-    return new Intl.DateTimeFormat('es-ES', options).format(date);
-};
-
+// Definir la función que devuelve la cantidad de días de un mes en un año específico
 const getDaysInMonth = (month, year) => {
     return new Date(year, month, 0).getDate();
 };
@@ -34,8 +23,9 @@ function App() {
     const [formData, setFormData] = useState({
         cliente: '',
         servicio: '',
-        moviles: [{ movil: '' }],
-        choferes: [{ chofer: '' }],
+        unidades: [
+            { movil: '', choferes: ['', '', ''] }
+        ],
         origen: '',
         destino: '',
         horario: '',
@@ -43,10 +33,33 @@ function App() {
     });
 
     const sliderRef = useRef(null);
-    const daysInYear = generateDaysForYear(currentYear);
 
-    // Configuración del slider
-    const settings = {
+    const getDayOfWeek = useCallback((day, month, year) => {
+        const date = new Date(year, month - 1, day);
+        const options = { weekday: 'long' };
+        return new Intl.DateTimeFormat('es-ES', options).format(date);
+    }, []);
+
+    const getMonthName = useCallback((month) => {
+        const date = new Date(0, month - 1);
+        const options = { month: 'long' };
+        return new Intl.DateTimeFormat('es-ES', options).format(date);
+    }, []);
+
+    // Generar días del año con useMemo
+    const daysInYear = useMemo(() => {
+        let days = [];
+        for (let month = 1; month <= 12; month++) {
+            const daysInMonth = getDaysInMonth(month, currentYear);
+            for (let day = 1; day <= daysInMonth; day++) {
+                days.push({ day, dayOfWeek: getDayOfWeek(day, month, currentYear), month, year: currentYear });
+            }
+        }
+        return days;
+    }, [currentYear, getDayOfWeek]);
+
+    // Configuración del slider con useMemo
+    const settings = useMemo(() => ({
         dots: false,
         infinite: false,
         speed: 500,
@@ -58,9 +71,8 @@ function App() {
             const viewedMonth = daysInYear[current].month;
             setViewedMonthIndex(viewedMonth - 1);
         },
-    };
+    }), [currentIndex, daysInYear]);
 
-    // Obtener los servicios de Supabase al cargar la app
     useEffect(() => {
         const fetchServices = async () => {
             const { data: services, error } = await supabase
@@ -83,38 +95,32 @@ function App() {
 
         fetchServices();
 
-        // Suscripción en tiempo real para actualizar los datos sin necesidad de recargar
         const subscription = supabase
-            .from('services')
-            .on('*', (payload) => {
+            .channel('public:services')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, (payload) => {
                 console.log('Cambio en tiempo real:', payload);
-                fetchServices(); // Refrescar los servicios cuando se detecta un cambio
+                fetchServices();
             })
             .subscribe();
 
-        // Configurar el carrusel para comenzar en el día actual
         const todayIndex = daysInYear.findIndex(
             (day) => day.day === currentDay && day.month === currentMonth
         );
         setCurrentIndex(todayIndex);
 
-        // Limpiar la suscripción cuando se desmonte el componente
         return () => {
-            supabase.removeSubscription(subscription);
+            supabase.removeChannel(subscription);
         };
-    }, []);
+    }, [currentDay, currentMonth, daysInYear]);
 
-    // Guardar un servicio en Supabase
     const saveServiceToDatabase = async (serviceData) => {
         const { error } = await supabase
             .from('services')
-            .insert([serviceData]); // Eliminar variable 'data' no usada
+            .insert([serviceData]);
 
         if (error) {
             console.error('Error al guardar el servicio:', error);
         } else {
-            console.log('Servicio guardado');
-            // Actualizar el estado con el nuevo servicio
             const dateKey = `${serviceData.year}-${serviceData.month}-${serviceData.day}`;
             setServices((prevServices) => ({
                 ...prevServices,
@@ -123,30 +129,14 @@ function App() {
         }
     };
 
-    const next = () => {
-        if (sliderRef.current) {
-            sliderRef.current.slickNext();
-        }
-    };
-
-    const previous = () => {
-        if (sliderRef.current) {
-            sliderRef.current.slickPrev();
-        }
-    };
-
-    const jumpToMonth = (event) => {
-        const selectedMonth = parseInt(event.target.value, 10);
-        const firstDayOfMonth = daysInYear.findIndex((day) => day.month === selectedMonth + 1);
-        if (sliderRef.current && firstDayOfMonth !== -1) {
-            sliderRef.current.slickGoTo(firstDayOfMonth);
-        }
-    };
-
-    const displayedMonthName = getMonthName(viewedMonthIndex + 1);
-
-    const addService = (dateKey) => {
-        setShowForm(dateKey);
+    const addUnidad = () => {
+        setFormData((prevData) => ({
+            ...prevData,
+            unidades: [
+                ...prevData.unidades,
+                { movil: '', choferes: ['', '', ''] }
+            ]
+        }));
     };
 
     const handleInputChange = (e) => {
@@ -158,8 +148,6 @@ function App() {
     };
 
     const handleArrayInputChange = (e, index, field, type) => {
-        if (!formData[type]) return;
-
         const updatedData = formData[type].map((item, i) =>
             i === index ? { ...item, [field]: e.target.value } : item
         );
@@ -169,17 +157,14 @@ function App() {
         }));
     };
 
-    const addMovil = () => {
+    const handleChoferInputChange = (e, unidadIndex, choferIndex) => {
+        const updatedChoferes = [...formData.unidades[unidadIndex].choferes];
+        updatedChoferes[choferIndex] = e.target.value;
+        const updatedUnidades = [...formData.unidades];
+        updatedUnidades[unidadIndex].choferes = updatedChoferes;
         setFormData((prevData) => ({
             ...prevData,
-            moviles: [...(prevData.moviles || []), { movil: '' }]
-        }));
-    };
-
-    const addChofer = () => {
-        setFormData((prevData) => ({
-            ...prevData,
-            choferes: [...(prevData.choferes || []), { chofer: '' }]
+            unidades: updatedUnidades
         }));
     };
 
@@ -197,8 +182,7 @@ function App() {
         setFormData({
             cliente: '',
             servicio: '',
-            moviles: [{ movil: '' }],
-            choferes: [{ chofer: '' }],
+            unidades: [{ movil: '', choferes: ['', '', ''] }],
             origen: '',
             destino: '',
             horario: '',
@@ -206,6 +190,7 @@ function App() {
         });
     };
 
+    // Función para marcar un servicio como completado
     const markAsCompleted = async (dateKey, index) => {
         const service = services[dateKey][index];
         const { error } = await supabase
@@ -220,6 +205,32 @@ function App() {
             updatedServices[dateKey][index].completed = true;
             setServices(updatedServices);
         }
+    };
+
+    const next = () => {
+        if (sliderRef.current) {
+            sliderRef.current.slickNext();
+        }
+    };
+
+    const previous = () => {
+        if (sliderRef.current) {
+            sliderRef.current.slickPrev();
+        }
+    };
+
+    const jumpToMonth = (event) => {
+        const selectedMonth = parseInt(event.target.value, 10) + 1;
+        const firstDayOfMonth = daysInYear.findIndex((day) => day.month === selectedMonth);
+        if (sliderRef.current && firstDayOfMonth !== -1) {
+            sliderRef.current.slickGoTo(firstDayOfMonth);
+        }
+    };
+
+    const displayedMonthName = getMonthName(viewedMonthIndex + 1);
+
+    const addService = (dateKey) => {
+        setShowForm(dateKey);
     };
 
     return (
@@ -279,11 +290,13 @@ function App() {
                                                         <div key={index} className="service-card">
                                                             <p><strong>Cliente:</strong> {service.cliente}</p>
                                                             <p><strong>Servicio:</strong> {service.servicio}</p>
-                                                            {service.moviles?.map((movil, idx) => (
-                                                                <p key={idx}><strong>Móvil:</strong> {movil.movil}</p>
-                                                            ))}
-                                                            {service.choferes?.map((chofer, idx) => (
-                                                                <p key={idx}><strong>Chofer:</strong> {chofer.chofer}</p>
+                                                            {service.unidades?.map((unidad, idx) => (
+                                                                <div key={idx}>
+                                                                    <p><strong>Móvil:</strong> {unidad.movil}</p>
+                                                                    {unidad.choferes.map((chofer, choferIdx) => (
+                                                                        <p key={choferIdx}><strong>Chofer {choferIdx + 1}:</strong> {chofer}</p>
+                                                                    ))}
+                                                                </div>
                                                             ))}
 
                                                             <button
@@ -328,34 +341,30 @@ function App() {
                             value={formData.servicio}
                             onChange={handleInputChange}
                         />
-                        {formData.moviles?.map((movil, index) => (
-                            <div key={index}>
-                                <label>Móvil:</label>
+
+                        {formData.unidades.map((unidad, index) => (
+                            <div key={index} className="unidad-box">
+                                <label>Movil:</label>
                                 <input
                                     type="text"
-                                    value={movil.movil}
-                                    onChange={(e) => handleArrayInputChange(e, index, 'movil', 'moviles')}
+                                    value={unidad.movil}
+                                    onChange={(e) => handleArrayInputChange(e, index, 'movil', 'unidades')}
                                 />
+                                {unidad.choferes.map((chofer, choferIndex) => (
+                                    <div key={choferIndex}>
+                                        <label>{`Chofer ${choferIndex + 1}:`}</label>
+                                        <input
+                                            type="text"
+                                            value={chofer}
+                                            onChange={(e) => handleChoferInputChange(e, index, choferIndex)}
+                                        />
+                                    </div>
+                                ))}
                             </div>
                         ))}
-                        {formData.choferes?.map((chofer, index) => (
-                            <div key={index}>
-                                <label>Chofer:</label>
-                                <input
-                                    type="text"
-                                    value={chofer.chofer}
-                                    onChange={(e) => handleArrayInputChange(e, index, 'chofer', 'choferes')}
-                                />
-                            </div>
-                        ))}
-                        <div className="add-more-buttons">
-                            <button onClick={addMovil} className="button add-more-btn">
-                                + Añadir otro Móvil
-                            </button>
-                            <button onClick={addChofer} className="button add-more-btn">
-                                + Añadir otro Chofer
-                            </button>
-                        </div>
+
+                        <button onClick={addUnidad} className="button add-more-btn">+ Añadir otra unidad</button>
+
                         <label>Origen:</label>
                         <input
                             type="text"
@@ -372,7 +381,7 @@ function App() {
                         />
                         <label>Horario:</label>
                         <input
-                            type="text"
+                            type="time"
                             name="horario"
                             value={formData.horario}
                             onChange={handleInputChange}
@@ -384,12 +393,9 @@ function App() {
                             value={formData.observaciones}
                             onChange={handleInputChange}
                         />
-                        <button onClick={() => saveService(showForm)} className="button save-btn">
-                            Guardar Servicio
-                        </button>
-                        <button onClick={() => setShowForm(null)} className="button cancel-btn">
-                            Cancelar
-                        </button>
+
+                        <button onClick={() => saveService(showForm)} className="button save-btn">Guardar Servicio</button>
+                        <button onClick={() => setShowForm(null)} className="button cancel-btn">Cerrar</button>
                     </div>
                 )}
 
@@ -399,11 +405,13 @@ function App() {
                             <h2>Detalles del Servicio</h2>
                             <p><strong>Cliente:</strong> {expandedService.cliente}</p>
                             <p><strong>Servicio:</strong> {expandedService.servicio}</p>
-                            {expandedService.moviles?.map((movil, index) => (
-                                <p key={index}><strong>Móvil:</strong> {movil.movil}</p>
-                            ))}
-                            {expandedService.choferes?.map((chofer, index) => (
-                                <p key={index}><strong>Chofer:</strong> {chofer.chofer}</p>
+                            {expandedService.unidades?.map((unidad, index) => (
+                                <div key={index}>
+                                    <p><strong>Móvil:</strong> {unidad.movil}</p>
+                                    {unidad.choferes.map((chofer, choferIndex) => (
+                                        <p key={choferIndex}><strong>Chofer {choferIndex + 1}:</strong> {chofer}</p>
+                                    ))}
+                                </div>
                             ))}
                             <p><strong>Origen:</strong> {expandedService.origen}</p>
                             <p><strong>Destino:</strong> {expandedService.destino}</p>
@@ -418,17 +426,6 @@ function App() {
             </div>
         </div>
     );
-}
-
-function generateDaysForYear(year) {
-    let days = [];
-    for (let month = 1; month <= 12; month++) {
-        const daysInMonth = getDaysInMonth(month, year);
-        for (let day = 1; day <= daysInMonth; day++) {
-            days.push({ day, dayOfWeek: getDayOfWeek(day, month, year), month, year });
-        }
-    }
-    return days;
 }
 
 export default App;
