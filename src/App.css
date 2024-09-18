@@ -151,6 +151,19 @@ header {
 .save-btn {
   width: 100%;
 }
+.cancel-btn {
+  background-color: #dc3545;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  width: 48%;
+  cursor: pointer;
+}
+
+.cancel-btn:hover {
+  background-color: #c82333;
+}
 
 /* Modal */
 .modal {

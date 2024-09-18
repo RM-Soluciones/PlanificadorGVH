@@ -362,6 +362,9 @@ function App() {
                         <button onClick={() => saveService(showForm)} className="button save-btn">
                             Guardar Servicio
                         </button>
+                        <button onClick={() => setShowForm(null)} className="button cancel-btn">
+                            Cancelar
+                        </button>
                     </div>
                 )}
 
