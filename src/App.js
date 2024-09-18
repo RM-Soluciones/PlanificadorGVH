@@ -23,8 +23,11 @@ const getDaysInMonth = (month, year) => {
 
 function App() {
     const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
+    const currentDay = new Date().getDate();
+
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [viewedMonthIndex, setViewedMonthIndex] = useState(new Date().getMonth());
+    const [viewedMonthIndex, setViewedMonthIndex] = useState(currentMonth - 1);
     const [services, setServices] = useState({});
     const [showForm, setShowForm] = useState(null);
     const [expandedService, setExpandedService] = useState(null);
@@ -49,6 +52,7 @@ function App() {
         speed: 500,
         slidesToShow: 6,
         slidesToScroll: 1,
+        initialSlide: currentIndex,
         afterChange: (current) => {
             setCurrentIndex(current);
             const viewedMonth = daysInYear[current].month;
@@ -76,7 +80,28 @@ function App() {
                 setServices(formattedServices);
             }
         };
+
         fetchServices();
+
+        // Suscripción en tiempo real para actualizar los datos sin necesidad de recargar
+        const subscription = supabase
+            .from('services')
+            .on('*', (payload) => {
+                console.log('Cambio en tiempo real:', payload);
+                fetchServices(); // Refrescar los servicios cuando se detecta un cambio
+            })
+            .subscribe();
+
+        // Configurar el carrusel para comenzar en el día actual
+        const todayIndex = daysInYear.findIndex(
+            (day) => day.day === currentDay && day.month === currentMonth
+        );
+        setCurrentIndex(todayIndex);
+
+        // Limpiar la suscripción cuando se desmonte el componente
+        return () => {
+            supabase.removeSubscription(subscription);
+        };
     }, []);
 
     // Guardar un servicio en Supabase
