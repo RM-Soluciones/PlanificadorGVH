@@ -19,6 +19,7 @@ function App() {
     const [viewedMonthIndex, setViewedMonthIndex] = useState(currentMonth - 1);
     const [services, setServices] = useState({});
     const [showForm, setShowForm] = useState(null);
+    const [editingService, setEditingService] = useState(null); // Estado para manejar la edición
     const [expandedService, setExpandedService] = useState(null);
     const [formData, setFormData] = useState({
         cliente: '',
@@ -129,6 +130,26 @@ function App() {
         }
     };
 
+    const updateServiceInDatabase = async (serviceData) => {
+        const { error } = await supabase
+            .from('services')
+            .update(serviceData)
+            .eq('id', serviceData.id);
+
+        if (error) {
+            console.error('Error al actualizar el servicio:', error);
+        } else {
+            const dateKey = `${serviceData.year}-${serviceData.month}-${serviceData.day}`;
+            setServices((prevServices) => {
+                const updatedServices = { ...prevServices };
+                updatedServices[dateKey] = updatedServices[dateKey].map((s) =>
+                    s.id === serviceData.id ? serviceData : s
+                );
+                return updatedServices;
+            });
+        }
+    };
+
     const addUnidad = () => {
         setFormData((prevData) => ({
             ...prevData,
@@ -190,7 +211,22 @@ function App() {
         });
     };
 
-    // Función para marcar un servicio como completado
+    const updateService = () => {
+        const serviceData = {
+            ...formData,
+            id: editingService.id, // ID del servicio que estamos editando
+        };
+        updateServiceInDatabase(serviceData);
+        setShowForm(null);
+        setEditingService(null);
+    };
+
+    const editService = (service) => {
+        setFormData(service); // Cargar datos existentes en el formulario
+        setEditingService(service); // Guardar el servicio que se está editando
+        setShowForm(true);
+    };
+
     const markAsCompleted = async (dateKey, index) => {
         const service = services[dateKey][index];
         const { error } = await supabase
@@ -307,6 +343,13 @@ function App() {
                                                             </button>
 
                                                             <button
+                                                                className="button"
+                                                                onClick={() => editService(service)} // Botón para editar
+                                                            >
+                                                                Editar
+                                                            </button>
+
+                                                            <button
                                                                 className="button completed-btn"
                                                                 onClick={() => markAsCompleted(dateKey, index)}
                                                             >
@@ -326,7 +369,7 @@ function App() {
 
                 {showForm && (
                     <div className="form-container">
-                        <h4>Añadir servicio</h4>
+                        <h4>{editingService ? "Editar servicio" : "Añadir servicio"}</h4>
                         <label>Cliente:</label>
                         <input
                             type="text"
@@ -394,7 +437,11 @@ function App() {
                             onChange={handleInputChange}
                         />
 
-                        <button onClick={() => saveService(showForm)} className="button save-btn">Guardar Servicio</button>
+                        {editingService ? (
+                            <button onClick={updateService} className="button save-btn">Actualizar Servicio</button>
+                        ) : (
+                            <button onClick={() => saveService(showForm)} className="button save-btn">Guardar Servicio</button>
+                        )}
                         <button onClick={() => setShowForm(null)} className="button cancel-btn">Cerrar</button>
                     </div>
                 )}

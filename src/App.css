@@ -1,186 +1,133 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
-
-body {
-  font-family: 'Roboto', sans-serif; /* Asegúrate de importar esta fuente en tu HTML */
-  margin: 0;
-  padding: 0;
-  background-color: #f0f2f5; /* Fondo suave */
-}
-
+/* Estilos generales para la app */
 .app-container {
   padding: 20px;
-  max-width: 90%;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
+/* Estilo para el header */
 .header {
   text-align: center;
-  margin-bottom: 20px;
-}
-
-h1 {
-  font-size: 2.5rem;
-  color: #333;
-  margin: 0;
+  padding-bottom: 10px;
 }
 
 .month-viewing {
-  font-size: 1.5rem;
-  color: #555;
-  margin-bottom: 20px;
+  text-align: center;
+  margin: 10px 0;
 }
 
 .month-selector {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.month-selector label {
-  margin-right: 10px;
-  font-size: 1.2rem;
-}
-
-.month-selector select {
-  padding: 8px 12px;
-  font-size: 1.1rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  background-color: white;
+  text-align: center;
+  margin-bottom: 15px;
 }
 
 .slider-controls {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
+/* Estilo para los botones */
 .button {
   background-color: #007bff;
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 10px 15px;
   cursor: pointer;
-  border-radius: 8px;
-  margin: 0 10px;
-  font-size: 1.1rem;
-  transition: background-color 0.3s;
-}
-
-.button:hover {
-  background-color: #0056b3;
-}
-
-.slider-container {
-  margin-top: 20px;
-}
-
-.day-card {
-  padding: 10px;
-  text-align: center;
-}
-
-.day-card-content {
-  background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  min-height: 150px;
-  position: relative;
-}
-
-.day-card h3 {
-  font-size: 1.5rem;
-  margin: 0;
-  color: #333;
+  border-radius: 5px;
+  margin: 0 5px;
 }
 
 .add-service-btn {
   background-color: #28a745;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 5px 10px;
   cursor: pointer;
-  border-radius: 8px;
-  margin-top: 10px;
-  font-size: 1rem;
-}
-
-.add-service-btn:hover {
-  background-color: #218838;
-}
-
-.service-list-items {
-  margin-top: 20px;
-}
-
-.service-card {
-  background-color: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 10px;
-  text-align: left;
-}
-
-.service-card p {
-  margin: 0;
+  border-radius: 5px;
+  font-size: 14px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 .completed-btn {
-  background-color: #28a745;
+  background-color: green;
   color: white;
-  padding: 8px;
-  border: none;
-  cursor: pointer;
-  border-radius: 6px;
-  width: 100%;
-}
-
-.completed-btn:hover {
-  background-color: #218838;
-}
-
-.form-container {
-  background-color: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
-}
-
-input[type="text"], select {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-}
-
-.save-btn, .cancel-btn {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 8px;
   margin-top: 10px;
   width: 100%;
-  font-size: 1.1rem;
-}
-
-.save-btn:hover {
-  background-color: #0056b3;
 }
 
 .cancel-btn {
-  background-color: #6c757d;
+  background-color: #dc3545;
+  color: white;
+  margin-top: 10px;
+  width: 100%;
 }
 
-.cancel-btn:hover {
-  background-color: #5a6268;
+.save-btn {
+  background-color: #28a745;
+  color: white;
+  margin-top: 10px;
+  width: 100%;
 }
 
+.add-more-btn {
+  background-color: #17a2b8;
+  color: white;
+  margin: 10px 0;
+  padding: 5px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+/* Estilo para las tarjetas de los días */
+.day-card {
+  padding: 10px;
+}
+
+.day-card-content {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 15px;
+  position: relative;
+  min-height: 150px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.service-list-items {
+  margin-top: 10px;
+}
+
+.service-card {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  background-color: #fff;
+}
+
+.service-card p {
+  margin: 5px 0;
+}
+
+/* Estilos para el formulario */
+.form-container {
+  background-color: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  margin: 20px auto;
+}
+
+.form-container input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* Modal para ver detalles */
 .modal {
   position: fixed;
   top: 0;
@@ -196,22 +143,62 @@ input[type="text"], select {
 .modal-content {
   background-color: white;
   padding: 20px;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 500px;
-}
-
-.close-btn {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 10px;
-  cursor: pointer;
   border-radius: 8px;
-  margin-top: 10px;
-  width: 100%;
+  width: 80%;
+  max-width: 500px;
+  position: relative;
 }
 
-.close-btn:hover {
-  background-color: #c82333;
+/* Adaptación responsiva */
+@media (max-width: 768px) {
+  /* Mostrar solo dos días por pantalla en dispositivos móviles */
+  .slick-slide {
+    width: calc(50% - 20px) !important;
+  }
+
+  /* Ajustes en los botones para dispositivos móviles */
+  .button {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+
+  .add-service-btn {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  /* Ajustar las tarjetas de los días */
+  .day-card-content {
+    min-height: 130px;
+    padding: 10px;
+  }
+
+  .form-container {
+    width: 90%;
+    margin: 10px auto;
+    padding: 15px;
+  }
+
+  .modal-content {
+    width: 90%;
+    max-width: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Ajustes adicionales para pantallas más pequeñas */
+  .day-card-content {
+    min-height: 100px;
+    padding: 10px;
+  }
+
+  .add-service-btn {
+    top: 5px;
+    right: 5px;
+  }
+
+  .form-container {
+    width: 100%;
+    padding: 10px;
+  }
 }
