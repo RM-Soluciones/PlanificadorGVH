@@ -59,12 +59,11 @@ function App() {
         return days;
     }, [currentYear, getDayOfWeek]);
 
-    // Configuración del slider con useMemo
     const settings = useMemo(() => ({
         dots: false,
         infinite: false,
         speed: 500,
-        slidesToShow: 6,
+        slidesToShow: window.innerWidth <= 768 ? 2 : window.innerWidth <= 1024 ? 4 : 6, // 2 días en móviles, 4 en tablets, 6 en pantallas grandes
         slidesToScroll: 1,
         initialSlide: currentIndex,
         afterChange: (current) => {
@@ -329,9 +328,11 @@ function App() {
                                                             {service.unidades?.map((unidad, idx) => (
                                                                 <div key={idx}>
                                                                     <p><strong>Móvil:</strong> {unidad.movil}</p>
-                                                                    {unidad.choferes.map((chofer, choferIdx) => (
-                                                                        <p key={choferIdx}><strong>Chofer {choferIdx + 1}:</strong> {chofer}</p>
-                                                                    ))}
+                                                                    {unidad.choferes
+                                                                        .filter((chofer) => chofer) // Filtrar los choferes vacíos
+                                                                        .map((chofer, choferIdx) => (
+                                                                            <p key={choferIdx}><strong>Chofer {choferIdx + 1}:</strong> {chofer}</p>
+                                                                        ))}
                                                                 </div>
                                                             ))}
 
@@ -447,7 +448,7 @@ function App() {
                 )}
 
                 {expandedService && (
-                    <div className="modal" onClick={() => setExpandedService(null)}>
+                    <div className="modal-backdrop" onClick={() => setExpandedService(null)}>
                         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                             <h2>Detalles del Servicio</h2>
                             <p><strong>Cliente:</strong> {expandedService.cliente}</p>
