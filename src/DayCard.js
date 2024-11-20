@@ -9,6 +9,7 @@ const DayCard = ({
     services,
     onAddService,
     onViewDetails,
+    isAuthenticated, // Añadido aquí
 }) => {
     const dateKey = `${day.year}-${day.month}-${day.day}`;
     const [isOpen, setIsOpen] = useState(true); // Estado inicial abierto
@@ -26,9 +27,11 @@ const DayCard = ({
             </div>
             {isOpen && (
                 <div className="service-list">
-                    <button className="icon-button add-service-btn" onClick={() => onAddService(dateKey)}>
-                        <FaPlus /> Añadir
-                    </button>
+                    {isAuthenticated && (
+                        <button className="icon-button add-service-btn" onClick={() => onAddService(dateKey)}>
+                            <FaPlus /> Añadir
+                        </button>
+                    )}
                     {services[dateKey] && services[dateKey].length > 0 ? (
                         <ul className="service-items">
                             {services[dateKey].map((service) => (

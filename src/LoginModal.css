@@ -1,0 +1,50 @@
+/* LoginModal.css */
+.login-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-modal {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    position: relative;
+    width: 300px;
+}
+
+.close-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+}
+
+.login-modal h2 {
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.login-modal input {
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.login-modal button {
+    width: 100%;
+    padding: 0.5rem;
+}
+
+.error-message {
+    color: red;
+    text-align: center;
+}

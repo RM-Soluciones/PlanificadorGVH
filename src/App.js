@@ -12,6 +12,11 @@ import DayCard from './DayCard';
 import ServiceForm from './ServiceForm';
 import ServiceDetailsModal from './ServiceDetailsModal';
 import { SuccessNotification, ErrorNotification } from './Notifications';
+import LoginModal from './LoginModal';
+
+// Importar librerías para descargar Excel y PDF
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
 
 // Función para obtener la cantidad de días en un mes específico
 const getDaysInMonth = (month, year) => {
@@ -44,6 +49,33 @@ function App() {
 
     const sliderRef = useRef(null);
 
+    // Estados para el filtro
+    const [filter, setFilter] = useState({ cliente: '', month: '' });
+
+    // Estado de autenticación
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [showLoginModal, setShowLoginModal] = useState(false);
+
+    // Manejar cambios en el filtro
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilter((prev) => ({
+            ...prev,
+            [name]: value
+        }));
+    };
+
+    // Manejar inicio de sesión
+    const handleLogin = () => {
+        setIsAuthenticated(true);
+        setShowLoginModal(false);
+    };
+
+    // Manejar cierre de sesión
+    const handleLogout = () => {
+        setIsAuthenticated(false);
+    };
+
     // Obtener el nombre del día de la semana
     const getDayOfWeek = useCallback((day, month, year) => {
         const date = new Date(year, month - 1, day);
@@ -72,9 +104,9 @@ function App() {
 
     // Calcular el índice de la fecha actual
     const todayIndex = useMemo(() => {
-        return daysInYear.findIndex(day => 
-            day.day === currentDay && 
-            day.month === currentMonth && 
+        return daysInYear.findIndex(day =>
+            day.day === currentDay &&
+            day.month === currentMonth &&
             day.year === currentYear
         );
     }, [daysInYear, currentDay, currentMonth, currentYear]);
@@ -113,14 +145,14 @@ function App() {
     // Obtener y suscribirse a los servicios
     useEffect(() => {
         const fetchServices = async () => {
-            const { data: services, error } = await supabase
+            const { data: servicesData, error } = await supabase
                 .from('services')
                 .select('*');
             if (error) {
                 console.error('Error al obtener los servicios:', error);
                 setNotification({ type: 'error', message: 'Error al obtener los servicios.' });
             } else {
-                const formattedServices = services.reduce((acc, service) => {
+                const formattedServices = servicesData.reduce((acc, service) => {
                     const dateKey = `${service.year}-${service.month}-${service.day}`;
                     if (!acc[dateKey]) {
                         acc[dateKey] = [];
@@ -157,7 +189,7 @@ function App() {
 
     // Guardar servicio en la base de datos
     const saveServiceToDatabase = async (serviceData) => {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('services')
             .insert([serviceData]);
 
@@ -165,18 +197,24 @@ function App() {
             console.error('Error al guardar el servicio:', error);
             setNotification({ type: 'error', message: 'Error al guardar el servicio.' });
         } else {
-            const dateKey = `${serviceData.year}-${serviceData.month}-${serviceData.day}`;
-            setServices((prevServices) => ({
-                ...prevServices,
-                [dateKey]: [...(prevServices[dateKey] || []), serviceData]
-            }));
+            // Actualizar el estado local
+            const savedService = data[0];
+            const dateKey = `${savedService.year}-${savedService.month}-${savedService.day}`;
+            setServices((prevServices) => {
+                const updatedServices = { ...prevServices };
+                if (!updatedServices[dateKey]) {
+                    updatedServices[dateKey] = [];
+                }
+                updatedServices[dateKey].push(savedService);
+                return updatedServices;
+            });
             setNotification({ type: 'success', message: 'Servicio guardado exitosamente.' });
         }
     };
 
     // Actualizar servicio en la base de datos
     const updateServiceInDatabase = async (serviceData) => {
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('services')
             .update(serviceData)
             .eq('id', serviceData.id);
@@ -185,12 +223,16 @@ function App() {
             console.error('Error al actualizar el servicio:', error);
             setNotification({ type: 'error', message: 'Error al actualizar el servicio.' });
         } else {
-            const dateKey = `${serviceData.year}-${serviceData.month}-${serviceData.day}`;
+            // Actualizar el estado local
+            const updatedService = data[0];
+            const dateKey = `${updatedService.year}-${updatedService.month}-${updatedService.day}`;
             setServices((prevServices) => {
                 const updatedServices = { ...prevServices };
-                updatedServices[dateKey] = updatedServices[dateKey].map((s) =>
-                    s.id === serviceData.id ? serviceData : s
-                );
+                if (updatedServices[dateKey]) {
+                    updatedServices[dateKey] = updatedServices[dateKey].map((service) =>
+                        service.id === updatedService.id ? updatedService : service
+                    );
+                }
                 return updatedServices;
             });
             setNotification({ type: 'success', message: 'Servicio actualizado exitosamente.' });
@@ -284,8 +326,8 @@ function App() {
 
     // Marcar servicio como completado
     const markAsCompleted = async (service) => {
-        const { id, year, month, day } = service;
-        const { error } = await supabase
+        const { id } = service;
+        const { data, error } = await supabase
             .from('services')
             .update({ completed: true })
             .eq('id', id);
@@ -294,12 +336,15 @@ function App() {
             console.error('Error al marcar como completado:', error);
             setNotification({ type: 'error', message: 'Error al marcar como completado.' });
         } else {
-            const dateKey = `${year}-${month}-${day}`;
+            const updatedService = data[0];
+            const dateKey = `${updatedService.year}-${updatedService.month}-${updatedService.day}`;
             setServices((prevServices) => {
                 const updatedServices = { ...prevServices };
-                updatedServices[dateKey] = updatedServices[dateKey].map((s) =>
-                    s.id === id ? { ...s, completed: true } : s
-                );
+                if (updatedServices[dateKey]) {
+                    updatedServices[dateKey] = updatedServices[dateKey].map((s) =>
+                        s.id === updatedService.id ? updatedService : s
+                    );
+                }
                 return updatedServices;
             });
             setNotification({ type: 'success', message: 'Servicio marcado como completado.' });
@@ -331,8 +376,14 @@ function App() {
 
     const displayedMonthName = getMonthName(viewedMonthIndex + 1);
 
+    // Modificar addService para verificar autenticación
     const addService = (dateKey) => {
-        setShowForm(dateKey);
+        if (isAuthenticated) {
+            setShowForm(dateKey);
+        } else {
+            setNotification({ type: 'error', message: 'Debes iniciar sesión para agregar servicios.' });
+            setShowLoginModal(true);
+        }
     };
 
     // Cerrar notificaciones
@@ -340,9 +391,72 @@ function App() {
         setNotification({ type: '', message: '' });
     };
 
+    // Descargar Excel
+    const downloadExcel = () => {
+        const servicesArray = Object.values(filteredServices).flat();
+        const worksheetData = servicesArray.map(service => ({
+            Fecha: `${service.day}/${service.month}/${service.year}`,
+            Cliente: service.cliente,
+            Servicio: service.servicio,
+            Unidades: service.unidades.map(u => `Móvil: ${u.movil}, Choferes: ${u.choferes.join(', ')}`).join(' | '),
+            Origen: service.origen,
+            Destino: service.destino,
+            Horario: service.horario,
+            Observaciones: service.observaciones,
+            Completado: service.completed ? 'Sí' : 'No'
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Servicios");
+        XLSX.writeFile(workbook, "Servicios.xlsx");
+    };
+
+    // Descargar PDF
+    const downloadPDF = () => {
+        const doc = new jsPDF();
+        const servicesArray = Object.values(filteredServices).flat();
+
+        doc.setFontSize(12);
+        doc.text("Servicios", 10, 10);
+        let yOffset = 20;
+
+        servicesArray.forEach((service, index) => {
+            const text = `${index + 1}. Fecha: ${service.day}/${service.month}/${service.year}, Cliente: ${service.cliente}, Servicio: ${service.servicio}`;
+            doc.text(text, 10, yOffset);
+            yOffset += 10;
+
+            if (yOffset > 280) {
+                doc.addPage();
+                yOffset = 20;
+            }
+        });
+
+        doc.save("Servicios.pdf");
+    };
+
+    // Filtrar los servicios
+    const filteredServices = useMemo(() => {
+        const filterByClient = (service) =>
+            !filter.cliente || service.cliente.toLowerCase().includes(filter.cliente.toLowerCase());
+
+        const filterByMonth = (service) =>
+            !filter.month || service.month === parseInt(filter.month, 10);
+
+        // Filtrar los servicios y mantener la estructura original
+        return Object.keys(services).reduce((acc, dateKey) => {
+            const dayServices = services[dateKey].filter(service => filterByClient(service) && filterByMonth(service));
+            acc[dateKey] = dayServices;
+            return acc;
+        }, {});
+    }, [filter, services]);
+
     return (
         <div className="app-container">
-            <Header />
+            <Header
+                isAuthenticated={isAuthenticated}
+                onLogout={handleLogout}
+                onLogin={() => setShowLoginModal(true)}
+            />
 
             {notification.message && (
                 notification.type === 'success' ? (
@@ -363,6 +477,29 @@ function App() {
                         />
                     </div>
 
+                    <div className="filter-container">
+                        <input
+                            type="text"
+                            name="cliente"
+                            placeholder="Buscar por cliente"
+                            value={filter.cliente}
+                            onChange={handleFilterChange}
+                        />
+                        <select name="month" value={filter.month} onChange={handleFilterChange}>
+                            <option value="">Todos los meses</option>
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <option key={i} value={i + 1}>
+                                    {getMonthName(i + 1).charAt(0).toUpperCase() + getMonthName(i + 1).slice(1)}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="download-buttons">
+                        <button className="button" onClick={downloadExcel}>Descargar Excel</button>
+                        <button className="button" onClick={downloadPDF}>Descargar PDF</button>
+                    </div>
+
                     <div className="slider-controls">
                         <button className="button" onClick={previous} disabled={currentIndex === 0}>
                             Anterior
@@ -381,16 +518,20 @@ function App() {
             <div className="slider-container">
                 {!showForm && (
                     <Slider ref={sliderRef} {...settings}>
-                        {daysInYear.map((day) => (
-                            <DayCard
-                                key={`${day.year}-${day.month}-${day.day}`}
-                                day={day}
-                                dayOfWeek={day.dayOfWeek}
-                                services={services}
-                                onAddService={addService}
-                                onViewDetails={setExpandedService}
-                            />
-                        ))}
+                        {daysInYear.map((day) => {
+                            const dateKey = `${day.year}-${day.month}-${day.day}`;
+                            return (
+                                <DayCard
+                                    key={dateKey}
+                                    day={day}
+                                    dayOfWeek={day.dayOfWeek}
+                                    services={filteredServices}
+                                    onAddService={addService}
+                                    onViewDetails={setExpandedService}
+                                    isAuthenticated={isAuthenticated} // Añadido aquí
+                                />
+                            );
+                        })}
                     </Slider>
                 )}
 
@@ -428,6 +569,13 @@ function App() {
                     />
                 )}
             </div>
+
+            {showLoginModal && (
+                <LoginModal
+                    onLogin={handleLogin}
+                    onClose={() => setShowLoginModal(false)}
+                />
+            )}
         </div>
     );
 }
