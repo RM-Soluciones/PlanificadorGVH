@@ -1,8 +1,15 @@
 // ServiceDetailsModal.js
 import React from 'react';
-import { FaTimes, FaEdit, FaCheck } from 'react-icons/fa';
+import { FaTimes, FaEdit, FaCheck, FaTrash } from 'react-icons/fa';
 
-const ServiceDetailsModal = ({ service, onClose, onEdit, onMarkAsCompleted }) => (
+const ServiceDetailsModal = ({
+    service,
+    onClose,
+    onEdit,
+    onMarkAsCompleted,
+    onDelete,
+    isAuthenticated,
+}) => (
     <div className="modal-backdrop" onClick={onClose}>
         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -29,14 +36,24 @@ const ServiceDetailsModal = ({ service, onClose, onEdit, onMarkAsCompleted }) =>
                 </div>
             </div>
             <div className="modal-actions">
-                {!service.completed && (
-                    <button className="button mark-completed-btn" onClick={() => onMarkAsCompleted(service)}>
-                        <FaCheck /> Marcar como Finalizado
-                    </button>
+                {isAuthenticated && (
+                    <>
+                        {!service.completed && (
+                            <button
+                                className="button mark-completed-btn"
+                                onClick={() => onMarkAsCompleted(service)}
+                            >
+                                <FaCheck /> Marcar como Finalizado
+                            </button>
+                        )}
+                        <button className="button edit-btn" onClick={() => onEdit(service)}>
+                            <FaEdit /> Editar Servicio
+                        </button>
+                        <button className="button delete-btn" onClick={() => onDelete(service)}>
+                            <FaTrash /> Eliminar Servicio
+                        </button>
+                    </>
                 )}
-                <button className="button edit-btn" onClick={() => onEdit(service)}>
-                    <FaEdit /> Editar Servicio
-                </button>
             </div>
         </div>
     </div>

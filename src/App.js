@@ -189,14 +189,26 @@ function App() {
 
     // Guardar servicio en la base de datos
     const saveServiceToDatabase = async (serviceData) => {
-        const { data, error } = await supabase
-            .from('services')
-            .insert([serviceData]);
+        try {
+            const { data, error } = await supabase
+                .from('services')
+                .insert([serviceData])
+                .select('*'); // Aseguramos que retorna los datos insertados
 
-        if (error) {
-            console.error('Error al guardar el servicio:', error);
-            setNotification({ type: 'error', message: 'Error al guardar el servicio.' });
-        } else {
+            console.log('Resultado de la inserción:', { data, error });
+
+            if (error) {
+                console.error('Error al guardar el servicio:', error);
+                setNotification({ type: 'error', message: `Error al guardar el servicio: ${error.message}` });
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                console.error('No se recibió ningún dato después de la inserción.');
+                setNotification({ type: 'error', message: 'No se pudo guardar el servicio. No se recibieron datos.' });
+                return;
+            }
+
             // Actualizar el estado local
             const savedService = data[0];
             const dateKey = `${savedService.year}-${savedService.month}-${savedService.day}`;
@@ -209,20 +221,35 @@ function App() {
                 return updatedServices;
             });
             setNotification({ type: 'success', message: 'Servicio guardado exitosamente.' });
+        } catch (err) {
+            console.error('Error inesperado al guardar el servicio:', err);
+            setNotification({ type: 'error', message: 'Error inesperado al guardar el servicio.' });
         }
     };
 
     // Actualizar servicio en la base de datos
     const updateServiceInDatabase = async (serviceData) => {
-        const { data, error } = await supabase
-            .from('services')
-            .update(serviceData)
-            .eq('id', serviceData.id);
+        try {
+            const { data, error } = await supabase
+                .from('services')
+                .update(serviceData)
+                .eq('id', serviceData.id)
+                .select('*');
 
-        if (error) {
-            console.error('Error al actualizar el servicio:', error);
-            setNotification({ type: 'error', message: 'Error al actualizar el servicio.' });
-        } else {
+            console.log('Resultado de la actualización:', { data, error });
+
+            if (error) {
+                console.error('Error al actualizar el servicio:', error);
+                setNotification({ type: 'error', message: `Error al actualizar el servicio: ${error.message}` });
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                console.error('No se recibió ningún dato después de la actualización.');
+                setNotification({ type: 'error', message: 'No se pudo actualizar el servicio.' });
+                return;
+            }
+
             // Actualizar el estado local
             const updatedService = data[0];
             const dateKey = `${updatedService.year}-${updatedService.month}-${updatedService.day}`;
@@ -236,6 +263,42 @@ function App() {
                 return updatedServices;
             });
             setNotification({ type: 'success', message: 'Servicio actualizado exitosamente.' });
+        } catch (err) {
+            console.error('Error inesperado al actualizar el servicio:', err);
+            setNotification({ type: 'error', message: 'Error inesperado al actualizar el servicio.' });
+        }
+    };
+
+    // Eliminar servicio de la base de datos
+    const deleteService = async (service) => {
+        if (!isAuthenticated) {
+            setNotification({ type: 'error', message: 'Debes iniciar sesión para eliminar servicios.' });
+            return;
+        }
+
+        const { id } = service;
+        const { error } = await supabase
+            .from('services')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Error al eliminar el servicio:', error);
+            setNotification({ type: 'error', message: 'Error al eliminar el servicio.' });
+        } else {
+            const dateKey = `${service.year}-${service.month}-${service.day}`;
+            setServices((prevServices) => {
+                const updatedServices = { ...prevServices };
+                if (updatedServices[dateKey]) {
+                    updatedServices[dateKey] = updatedServices[dateKey].filter(s => s.id !== id);
+                    if (updatedServices[dateKey].length === 0) {
+                        delete updatedServices[dateKey];
+                    }
+                }
+                return updatedServices;
+            });
+            setNotification({ type: 'success', message: 'Servicio eliminado exitosamente.' });
+            setExpandedService(null);
         }
     };
 
@@ -311,6 +374,11 @@ function App() {
 
     // Editar servicio
     const editService = (service) => {
+        if (!isAuthenticated) {
+            setNotification({ type: 'error', message: 'Debes iniciar sesión para editar servicios.' });
+            return;
+        }
+
         setFormData({
             cliente: service.cliente,
             servicio: service.servicio,
@@ -322,19 +390,29 @@ function App() {
         });
         setEditingService(service);
         setShowForm(`${service.year}-${service.month}-${service.day}`);
+        setExpandedService(null);
     };
 
     // Marcar servicio como completado
     const markAsCompleted = async (service) => {
+        if (!isAuthenticated) {
+            setNotification({ type: 'error', message: 'Debes iniciar sesión para marcar servicios como completados.' });
+            return;
+        }
+
         const { id } = service;
         const { data, error } = await supabase
             .from('services')
             .update({ completed: true })
-            .eq('id', id);
+            .eq('id', id)
+            .select('*');
 
         if (error) {
             console.error('Error al marcar como completado:', error);
             setNotification({ type: 'error', message: 'Error al marcar como completado.' });
+        } else if (!data || data.length === 0) {
+            console.error('No se recibió ningún dato después de marcar como completado.');
+            setNotification({ type: 'error', message: 'No se pudo marcar el servicio como completado.' });
         } else {
             const updatedService = data[0];
             const dateKey = `${updatedService.year}-${updatedService.month}-${updatedService.day}`;
@@ -348,6 +426,7 @@ function App() {
                 return updatedServices;
             });
             setNotification({ type: 'success', message: 'Servicio marcado como completado.' });
+            setExpandedService(null);
         }
     };
 
@@ -528,7 +607,7 @@ function App() {
                                     services={filteredServices}
                                     onAddService={addService}
                                     onViewDetails={setExpandedService}
-                                    isAuthenticated={isAuthenticated} // Añadido aquí
+                                    isAuthenticated={isAuthenticated}
                                 />
                             );
                         })}
@@ -566,6 +645,8 @@ function App() {
                         onClose={() => setExpandedService(null)}
                         onEdit={editService}
                         onMarkAsCompleted={markAsCompleted}
+                        onDelete={deleteService}
+                        isAuthenticated={isAuthenticated}
                     />
                 )}
             </div>
