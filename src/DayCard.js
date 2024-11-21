@@ -9,7 +9,7 @@ const DayCard = ({
     services,
     onAddService,
     onViewDetails,
-    isAuthenticated, // Añadido aquí
+    isAuthenticated,
 }) => {
     const dateKey = `${day.year}-${day.month}-${day.day}`;
     const [isOpen, setIsOpen] = useState(true); // Estado inicial abierto
@@ -43,7 +43,12 @@ const DayCard = ({
                                     <div className="service-info">
                                         <span><strong>{service.cliente}</strong></span>
                                         <span>{service.servicio}</span>
-                                        <span><strong>Móvil:</strong> {service.unidades[0].movil}</span>
+                                        {service.unidades.map((unidad, index) => (
+                                            <div key={index} className="unidad-info">
+                                                <span><strong>Móvil</strong> {unidad.movil}</span>
+                                                <span><strong>Choferes</strong> {unidad.choferes.filter(c => c).join(', ')}</span>
+                                            </div>
+                                        ))}
                                         <span><strong>Origen:</strong> {service.origen}</span>
                                         <span><strong>Destino:</strong> {service.destino}</span>
                                     </div>
