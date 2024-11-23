@@ -24,7 +24,7 @@ const ServiceDetailsModal = ({
                 <p><strong>Móvil:</strong> {service.unidades[0].movil}</p>
                 <p><strong>Origen:</strong> {service.origen}</p>
                 <p><strong>Destino:</strong> {service.destino}</p>
-                <p><strong>Horario:</strong> {service.horario}</p>
+                <p><strong>Horario de Inicio:</strong> {service.horario}</p>
                 <p><strong>Observaciones:</strong> {service.observaciones}</p>
                 <div className="service-choferes">
                     <strong>Choferes:</strong>
