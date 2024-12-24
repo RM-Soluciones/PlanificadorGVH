@@ -92,7 +92,7 @@ function App() {
 
     // Generar los días del año
 const daysInYear = useMemo(() => {
-    const rangeYears = 2; // Cubrirá año actual y siguiente
+    const rangeYears = 2;
     let days = [];
     
     for (let yearOffset = 0; yearOffset < rangeYears; yearOffset++) {
@@ -111,6 +111,15 @@ const daysInYear = useMemo(() => {
     }
     return days;
 }, [currentYear, getDayOfWeek]);
+
+// Update todayIndex calculation
+const todayIndex = useMemo(() => {
+    return daysInYear.findIndex(day =>
+        day.day === currentDay &&
+        day.month === currentMonth &&
+        day.year === currentYear
+    );
+}, [daysInYear, currentDay, currentMonth, currentYear]);
 
     // Configuración de react-slick con el índice de la fecha actual
     const settings = useMemo(() => ({
